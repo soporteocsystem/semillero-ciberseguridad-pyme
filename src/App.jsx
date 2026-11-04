@@ -451,6 +451,32 @@ PLAN ESTRATÉGICO DE MITIGACIÓN A 30 DÍAS (HERRAMIENTAS LIBRES & BAJO COSTO)
                       Riesgo: {scoreData.level}
                     </div>
                   </div>
-                  <button
+                 <button
                     onClick={() => window.print()}
-                    className="bg-slate-800 hover:bg-slate-700 text-slate-
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 p-3 rounded-xl border border-slate-700 transition print:hidden"
+                    title="Imprimir Informe / Exportar PDF"
+                  >
+                    <Printer className="w-5 h-5" />
+                  </button>
+                <input
+                  type="text"
+                  placeholder="Escriba su consulta técnica o de concientización..."
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-slate-950 px-4 py-2.5 rounded-xl flex items-center justify-center transition"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
