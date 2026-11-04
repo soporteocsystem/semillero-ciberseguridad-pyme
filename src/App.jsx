@@ -1,237 +1,85 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  ShieldCheck, ShieldAlert, Shield, AlertTriangle, CheckCircle2,
-  HelpCircle, UserCheck, Building2, Users, Briefcase, ChevronRight,
-  ChevronLeft, RefreshCw, Sparkles, Send, Download, FileText,
-  CheckSquare, Square, BarChart3, PieChart, Layers, ArrowRight, Activity
+  Shield, Building2, ArrowRight, RefreshCw, Sparkles, Send, Printer
 } from 'lucide-react';
 
-// Endpoint para Gemini API
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-// Banco de Preguntas Equilibrado por Dominios NIST CSF 2.0 / ISO 27001
+const SECTORES_ECONOMICOS = [
+  'Autopartes & Cadena de Suministro Industrial',
+  'Servicios & Consultoría Profesional',
+  'Comercio, Retail & Comercio Electrónico',
+  'Tecnología, Software & Telecomunicaciones',
+  'Salud, Clínicas & Servicios Médicos',
+  'Manufactura, Producción & Ensamble',
+  'Logística, Transporte & Almacenamiento',
+  'Sector Financiero, Contable & Jurídico',
+  'Alimentos, Agroindustria & Gastronomía',
+  'Educación, Academias & EdTech',
+  'Construcción, Ingeniería & Arquitectura',
+  'Hotelería, Turismo & Eventos',
+  'Inmobiliario & Gestión de Propiedades',
+  'Textil, Confección & Moda',
+  'Energía, Minería & Servicios Públicos',
+  'Medios, Publicidad & Marketing Digital'
+];
+
 const QUESTION_BANK = {
   ti: [
-    {
-      id: 'ti_1',
-      domain: 'Proteger (ISO A.9/A.13)',
-      question: '¿Cuenta con autenticación de múltiples factores (MFA) obligatoria en todas las cuentas de correo y accesos administrativos?',
-      weight: 12,
-      nistRef: 'PR.AA-03 / ISO A.9.4.2',
-      explanation: 'Sin MFA, las credenciales robadas otorgan acceso total a la infraestructura.'
-    },
-    {
-      id: 'ti_2',
-      domain: 'Recuperar (ISO A.12.3)',
-      question: '¿Posee un esquema automatizado de respaldos (Backups) probados periódicamente y aislados fuera de línea (Offline/Inmutables)?',
-      weight: 15,
-      nistRef: 'RC.RP-01 / ISO A.12.3.1',
-      explanation: 'Un backup conectado al mismo dominio será encriptado por un Ransomware.'
-    },
-    {
-      id: 'ti_3',
-      domain: 'Proteger (ISO A.12.6)',
-      question: '¿Existe una política activa y automatizada de parcheo de vulnerabilidades en SO y software clave antes de 30 días?',
-      weight: 10,
-      nistRef: 'PR.IP-01 / ISO A.12.6.1',
-      explanation: 'Los atacantes explotan fallos conocidos cuya solución ya existe.'
-    },
-    {
-      id: 'ti_4',
-      domain: 'Proteger (ISO A.13.1)',
-      question: '¿La red local de la empresa se encuentra segmentada (VLANs separadas para WiFi invitados, servidores, IoT y operativas)?',
-      weight: 8,
-      nistRef: 'PR.AC-05 / ISO A.13.1.1',
-      explanation: 'La falta de segmentación permite el movimiento lateral rápido en un ataque.'
-    },
-    {
-      id: 'ti_5',
-      domain: 'Detectar (ISO A.12.4)',
-      question: '¿Dispone de una solución EDR/Antivirus administrada centralizadamente con monitoreo de alertas activo?',
-      weight: 10,
-      nistRef: 'DE.CM-04 / ISO A.12.4.1',
-      explanation: 'Los antivirus tradicionales no detectan comportamiento anómalo en memoria.'
-    },
-    {
-      id: 'ti_6',
-      domain: 'Identificar (ISO A.8.1)',
-      question: '¿Tiene un inventario de software y hardware actualizado con eliminación de servicios sin uso o descontinuados?',
-      weight: 8,
-      nistRef: 'ID.AM-01 / ISO A.8.1.1',
-      explanation: 'No se puede proteger lo que no se conoce o no se administra.'
-    },
-    {
-      id: 'ti_7',
-      domain: 'Responder (ISO A.5.24)',
-      question: '¿Cuenta con un procedimiento documentado y probado para aislar equipos infectados y responder a incidentes de seguridad?',
-      weight: 12,
-      nistRef: 'RS.MA-01 / ISO A.5.24',
-      explanation: 'La improvisación en medio de un incidente aumenta el impacto financiero y operativo.'
-    },
-    {
-      id: 'ti_8',
-      domain: 'Gobernar (ISO A.5.1)',
-      question: '¿Existen políticas de seguridad de la información definidas, formalmente aprobadas y revisadas anualmente?',
-      weight: 7,
-      nistRef: 'GV.PO-01 / ISO A.5.1',
-      explanation: 'Sin políticas claras, las medidas técnicas carecen de respaldo organizativo.'
-    },
-    {
-      id: 'ti_9',
-      domain: 'Detectar (ISO A.12.4)',
-      question: '¿Se realiza recolección y revisión periódica de logs de eventos en servidores, firewalls y sistemas críticos?',
-      weight: 8,
-      nistRef: 'DE.AE-02 / ISO A.12.4.1',
-      explanation: 'Sin registros de auditoría es imposible detectar intromisiones o realizar análisis forense.'
-    },
-    {
-      id: 'ti_10',
-      domain: 'Recuperar (ISO A.17.1)',
-      question: '¿Se han ejecutado simulacros de recuperación ante desastres (DRP) en el último año para validar la continuidad operacional?',
-      weight: 10,
-      nistRef: 'RC.CO-01 / ISO A.17.1.1',
-      explanation: 'Los respaldos no garantizan la recuperación si los procesos de restauración no han sido validados.'
-    }
+    { id: 'ti_1', domain: 'Proteger (ISO A.9.4)', question: '1. ¿Cuenta con autenticación de múltiples factores (MFA) obligatoria en correo y accesos administrativos?', weight: 12, nistRef: 'PR.AA-03 / ISO A.9.4.2' },
+    { id: 'ti_2', domain: 'Recuperar (ISO A.12.3)', question: '2. ¿Posee esquemas de respaldos (Backups) automatizados, aislados fuera de línea (Offline) y probados en el año?', weight: 15, nistRef: 'RC.RP-01 / ISO A.12.3.1' },
+    { id: 'ti_3', domain: 'Proteger (ISO A.12.6)', question: '3. ¿Existe una política activa y automatizada de parcheo de vulnerabilidades en SO y software clave antes de 30 días?', weight: 10, nistRef: 'PR.IP-01 / ISO A.12.6.1' },
+    { id: 'ti_4', domain: 'Proteger (ISO A.13.1)', question: '4. ¿La red local de la empresa se encuentra segmentada (VLANs separadas para WiFi invitados, servidores e IoT)?', weight: 8, nistRef: 'PR.AC-05 / ISO A.13.1.1' },
+    { id: 'ti_5', domain: 'Detectar (ISO A.12.4)', question: '5. ¿Dispone de una solución EDR/Antivirus administrada centralizadamente con monitoreo de alertas activo?', weight: 10, nistRef: 'DE.CM-04 / ISO A.12.4.1' },
+    { id: 'ti_6', domain: 'Identificar (ISO A.8.1)', question: '6. ¿Tiene un inventario de software y hardware actualizado con eliminación de servicios no autorizados?', weight: 8, nistRef: 'ID.AM-01 / ISO A.8.1.1' },
+    { id: 'ti_7', domain: 'Responder (ISO A.5.24)', question: '7. ¿Cuenta con un procedimiento documentado para aislar equipos infectados y responder a incidentes?', weight: 12, nistRef: 'RS.MA-01 / ISO A.5.24' },
+    { id: 'ti_8', domain: 'Gobernar (ISO A.5.1)', question: '8. ¿Existen políticas formales de seguridad de la información revisadas y aprobadas anualmente?', weight: 7, nistRef: 'GV.PO-01 / ISO A.5.1' },
+    { id: 'ti_9', domain: 'Detectar (ISO A.12.4)', question: '9. ¿Se realiza recolección y revisión periódica de logs de eventos en servidores, firewalls y bases de datos?', weight: 8, nistRef: 'DE.AE-02 / ISO A.12.4.1' },
+    { id: 'ti_10', domain: 'Recuperar (ISO A.17.1)', question: '10. ¿Se han ejecutado simulacros de recuperación ante desastres (DRP) en el último año?', weight: 10, nistRef: 'RC.CO-01 / ISO A.17.1.1' }
   ],
   gerente: [
-    {
-      id: 'ge_1',
-      domain: 'Gobernar (ISO A.5.1)',
-      question: '¿La alta dirección asigna un presupuesto específico y recursos para la gestión de riesgos de ciberseguridad?',
-      weight: 15,
-      nistRef: 'GV.RM-01 / ISO A.5.1',
-      explanation: 'La ciberseguridad es una responsabilidad del negocio, no solo del departamento técnico.'
-    },
-    {
-      id: 'ge_2',
-      domain: 'Identificar (ISO A.5.9)',
-      question: '¿La empresa ha clasificado sus activos de información más críticos (datos de clientes, finanzas, PI) y evalúa sus riesgos?',
-      weight: 15,
-      nistRef: 'ID.RA-01 / ISO A.5.9',
-      explanation: 'Identificar el valor de la información permite priorizar las inversiones de protección.'
-    },
-    {
-      id: 'ge_3',
-      domain: 'Proteger (ISO A.7.2)',
-      question: '¿Se realizan capacitaciones periódicas y simulaciones de Phishing para todo el personal de la empresa?',
-      weight: 12,
-      nistRef: 'PR.AT-01 / ISO A.7.2.2',
-      explanation: 'El factor humano es el vector de ataque primario en el 80% de los incidentes.'
-    },
-    {
-      id: 'ge_4',
-      domain: 'Recuperar (ISO A.17.1)',
-      question: '¿Dispone la empresa de un Plan de Continuidad del Negocio (BCP) para operar ante fallas tecnológicas graves?',
-      weight: 15,
-      nistRef: 'RC.CO-02 / ISO A.17.1.2',
-      explanation: 'Garantiza la supervivencia comercial durante ataques de ransomware o desastres.'
-    },
-    {
-      id: 'ge_5',
-      domain: 'Proteger (ISO A.5.19)',
-      question: '¿Existen acuerdos de confidencialidad (NDA) y cláusulas de ciberseguridad exigidas a proveedores y terceros?',
-      weight: 11,
-      nistRef: 'PR.PS-01 / ISO A.5.19',
-      explanation: 'Los terceros representan una puerta trasera frecuente hacia la red corporativa.'
-    },
-    {
-      id: 'ge_6',
-      domain: 'Responder (ISO A.5.25)',
-      question: '¿Existe un protocolo de comunicación de crisis e informe legal/regulatorio ante fuga de datos o ciberataques?',
-      weight: 12,
-      nistRef: 'RS.CO-02 / ISO A.5.25',
-      explanation: 'No reportar brechas de datos genera sanciones legales e irreversibles daños reputacionales.'
-    },
-    {
-      id: 'ge_7',
-      domain: 'Gobernar (ISO A.5.4)',
-      question: '¿La gerencia revisa periódicamente el cumplimiento normativo (protección de datos, habeas data) aplicable a la PYME?',
-      weight: 10,
-      nistRef: 'GV.OV-01 / ISO A.5.4',
-      explanation: 'El incumplimiento normativo expone a la empresa a multas financieras considerables.'
-    },
-    {
-      id: 'ge_8',
-      domain: 'Detectar (ISO A.12.4)',
-      question: '¿Se reciben informes ejecutivos periódicos sobre el estado de las alertas y la postura de riesgo cibernético?',
-      weight: 10,
-      nistRef: 'DE.DP-01 / ISO A.12.4',
-      explanation: 'Sin visibilidad del riesgo, la toma de decisiones estratégicas se realiza a ciegas.'
-    }
+    { id: 'ge_1', domain: 'Gobernar (ISO A.5.1)', question: '1. ¿La alta dirección asigna un presupuesto específico y recursos para ciberseguridad?', weight: 12, nistRef: 'GV.RM-01 / ISO A.5.1' },
+    { id: 'ge_2', domain: 'Identificar (ISO A.5.9)', question: '2. ¿La empresa ha clasificado sus activos de información más críticos (datos de clientes, finanzas) y sus riesgos?', weight: 12, nistRef: 'ID.RA-01 / ISO A.5.9' },
+    { id: 'ge_3', domain: 'Proteger (ISO A.7.2)', question: '3. ¿Se realiza capacitación periódica y simulaciones de Phishing para el personal de la empresa?', weight: 10, nistRef: 'PR.AT-01 / ISO A.7.2.2' },
+    { id: 'ge_4', domain: 'Recuperar (ISO A.17.1)', question: '4. ¿Dispone la empresa de un Plan de Continuidad del Negocio (BCP) ante fallas tecnológicas o ataques?', weight: 12, nistRef: 'RC.CO-02 / ISO A.17.1.2' },
+    { id: 'ge_5', domain: 'Proteger (ISO A.5.19)', question: '5. ¿Existen acuerdos de confidencialidad (NDA) y cláusulas de seguridad para proveedores externos?', weight: 8, nistRef: 'PR.PS-01 / ISO A.5.19' },
+    { id: 'ge_6', domain: 'Responder (ISO A.5.25)', question: '6. ¿Existe un protocolo de notificación legal y de crisis ante fuga de datos o vulneraciones?', weight: 10, nistRef: 'RS.CO-02 / ISO A.5.25' },
+    { id: 'ge_7', domain: 'Gobernar (ISO A.5.4)', question: '7. ¿La gerencia revisa periódicamente el cumplimiento normativo aplicable (Ley 1581 Habeas Data)?', weight: 8, nistRef: 'GV.OV-01 / ISO A.5.4' },
+    { id: 'ge_8', domain: 'Detectar (ISO A.12.4)', question: '8. ¿Se evalúan los riesgos cibernéticos en la cadena de suministro y socios comerciales?', weight: 8, nistRef: 'DE.DP-01 / ISO A.12.4' },
+    { id: 'ge_9', domain: 'Proteger (ISO A.9.2)', question: '9. ¿Se exige evaluación de seguridad previa al adquirir o contratar nuevos desarrollos de software?', weight: 10, nistRef: 'PR.IP-02 / ISO A.9.2' },
+    { id: 'ge_10', domain: 'Gobernar (ISO A.5.2)', question: '10. ¿Se cuenta con un responsable formalmente designado para liderar la seguridad de la información?', weight: 10, nistRef: 'GV.RR-01 / ISO A.5.2' }
   ],
   admin: [
-    {
-      id: 'ad_1',
-      domain: 'Proteger (ISO A.9.2)',
-      question: '¿Existe un procedimiento formal para revocar accesos inmediatamente cuando un empleado deja la empresa?',
-      weight: 15,
-      nistRef: 'PR.AC-01 / ISO A.9.2.6',
-      explanation: 'Cuentas huérfanas de ex-empleados son utilizadas para robos de información.'
-    },
-    {
-      id: 'ad_2',
-      domain: 'Proteger (ISO A.9.4)',
-      question: '¿Se exige una política de contraseñas seguras y uso obligatorio de gestores de contraseñas institucionales?',
-      weight: 12,
-      nistRef: 'PR.AA-01 / ISO A.9.4.3',
-      explanation: 'La reutilización de contraseñas débiles compromete múltiples sistemas corporativos.'
-    },
-    {
-      id: 'ad_3',
-      domain: 'Proteger (ISO A.8.20)',
-      question: '¿Se prohíbe o restringe estrictamente el uso de memorias USB personales y dispositivos externos no autorizados?',
-      weight: 12,
-      nistRef: 'PR.PT-01 / ISO A.8.20',
-      explanation: 'Los medios extraíbles infectados son un vector clásico de entrada de malware offline.'
-    },
-    {
-      id: 'ad_4',
-      domain: 'Gobernar (ISO A.5.10)',
-      question: '¿Los empleados han firmado políticas claras sobre el uso aceptable de activos de información y equipos de cómputo?',
-      weight: 10,
-      nistRef: 'GV.PO-02 / ISO A.5.10',
-      explanation: 'Establece el marco legal y disciplinario para el manejo de los recursos tecnológicos.'
-    },
-    {
-      id: 'ad_5',
-      domain: 'Proteger (ISO A.7.1)',
-      question: '¿Se realizan verificaciones de antecedentes antes de la contratación de personal con acceso a datos sensibles?',
-      weight: 11,
-      nistRef: 'PR.AT-02 / ISO A.7.1.1',
-      explanation: 'Previene riesgos de amenazas internas e infiltraciones en roles clave.'
-    },
-    {
-      id: 'ad_6',
-      domain: 'Identificar (ISO A.8.1)',
-      question: '¿Se mantiene una lista limpia y actualizada de usuarios activos y los permisos que cada uno posee?',
-      weight: 15,
-      nistRef: 'ID.AM-02 / ISO A.8.1.2',
-      explanation: 'El principio de menor privilegio evita accesos no autorizados a datos confidenciales.'
-    },
-    {
-      id: 'ad_7',
-      domain: 'Responder (ISO A.5.26)',
-      question: '¿El personal conoce exactamente a quién contactar internamente al sospechar de un correo engañoso o virus?',
-      weight: 15,
-      nistRef: 'RS.MA-02 / ISO A.5.26',
-      explanation: 'La alerta temprana por parte de los usuarios permite contener brechas antes de que se extiendan.'
-    },
-    {
-      id: 'ad_8',
-      domain: 'Recuperar (ISO A.11.2)',
-      question: '¿Existen medidas de seguridad física (llaves, control de acceso) para resguardar los equipos e instalaciones principales?',
-      weight: 10,
-      nistRef: 'RC.RP-02 / ISO A.11.2',
-      explanation: 'El acceso físico directo a los equipos permite eludir la mayoría de los controles lógicos.'
-    }
+    { id: 'ad_1', domain: 'Proteger (ISO A.9.2)', question: '1. ¿Existe un procedimiento formal para revocar accesos inmediatamente al retirar personal?', weight: 12, nistRef: 'PR.AC-01 / ISO A.9.2.6' },
+    { id: 'ad_2', domain: 'Proteger (ISO A.9.4)', question: '2. ¿Se exige política de contraseñas complejas y uso de gestores de contraseñas institucionales?', weight: 10, nistRef: 'PR.AA-01 / ISO A.9.4.3' },
+    { id: 'ad_3', domain: 'Proteger (ISO A.8.20)', question: '3. ¿Se prohíbe o restringe el uso de memorias USB personales y dispositivos externos?', weight: 10, nistRef: 'PR.PT-01 / ISO A.8.20' },
+    { id: 'ad_4', domain: 'Gobernar (ISO A.5.10)', question: '4. ¿Los empleados han firmado políticas sobre el uso aceptable de activos de información?', weight: 8, nistRef: 'GV.PO-02 / ISO A.5.10' },
+    { id: 'ad_5', domain: 'Proteger (ISO A.7.1)', question: '5. ¿Se realizan verificaciones de antecedentes antes de la contratación de nuevo personal?', weight: 8, nistRef: 'PR.AT-02 / ISO A.7.1.1' },
+    { id: 'ad_6', domain: 'Identificar (ISO A.8.1)', question: '6. ¿Se mantiene una lista limpia y actualizada de usuarios activos y sus permisos asignados?', weight: 12, nistRef: 'ID.AM-02 / ISO A.8.1.2' },
+    { id: 'ad_7', domain: 'Responder (ISO A.5.26)', question: '7. ¿El personal sabe a quién reportar ante cualquier sospecha de correo engañoso o anomalía?', weight: 10, nistRef: 'RS.MA-02 / ISO A.5.26' },
+    { id: 'ad_8', domain: 'Recuperar (ISO A.11.2)', question: '8. ¿Existen controles de acceso físico (llaves, control biométrico) a las instalaciones críticas?', weight: 10, nistRef: 'RC.RP-02 / ISO A.11.2' },
+    { id: 'ad_9', domain: 'Proteger (ISO A.7.3)', question: '9. ¿Se aplican procesos disciplinarios formales ante violaciones deliberadas de seguridad?', weight: 10, nistRef: 'PR.AT-03 / ISO A.7.3' },
+    { id: 'ad_10', domain: 'Identificar (ISO A.5.9)', question: '10. ¿Se controla formalmente la eliminación segura de archivos físicos y digitales confidenciales?', weight: 10, nistRef: 'ID.AM-03 / ISO A.5.9' }
+  ],
+  usuario: [
+    { id: 'us_1', domain: 'Concienciación (ISO A.7.2.2)', question: '1. ¿Ha recibido charlas o capacitaciones de seguridad informática en la empresa en el último año?', weight: 10, nistRef: 'PR.AT-01 / ISO A.7.2.2' },
+    { id: 'us_2', domain: 'Percepción & Utilidad (ISO A.7.2)', question: '2. ¿Considera que los temas explicados en las capacitaciones son prácticos y fáciles de aplicar en su trabajo diario?', weight: 10, nistRef: 'PR.AT-01 / ISO A.7.2' },
+    { id: 'us_3', domain: 'Confianza & Preparación (ISO A.5.26)', question: '3. ¿Se siente preparado y seguro para identificar un correo de Phishing o un enlace fraudulento?', weight: 10, nistRef: 'RS.MA-02 / ISO A.5.26' },
+    { id: 'us_4', domain: 'Cultura de Reporte (ISO A.5.26)', question: '4. ¿Conoce con claridad el canal exacto o persona a la cual reportar una anomalía de seguridad sin temor a represalias?', weight: 10, nistRef: 'RS.MA-02 / ISO A.5.26' },
+    { id: 'us_5', domain: 'Hábitos de Contraseñas (ISO A.9.4)', question: '5. ¿Aplica la regla de utilizar contraseñas distintas y complejas para sus cuentas corporativas y personales?', weight: 10, nistRef: 'PR.AA-01 / ISO A.9.4.3' },
+    { id: 'us_6', domain: 'Manejo de Información (ISO A.8.1)', question: '6. ¿Suele bloquear su pantalla (Tecla Win+L) cada vez que se levanta de su puesto de trabajo?', weight: 10, nistRef: 'PR.AC-01 / ISO A.8.1' },
+    { id: 'us_7', domain: 'Uso de Dispositivos (ISO A.8.20)', question: '7. ¿Evita conectar memorias USB personales o celulares a su equipo de cómputo corporativo?', weight: 10, nistRef: 'PR.PT-01 / ISO A.8.20' },
+    { id: 'us_8', domain: 'Cultura Organizacional (ISO A.5.10)', question: '8. ¿Siente que la gerencia promueve activamente una cultura de ciberseguridad responsable en la empresa?', weight: 10, nistRef: 'GV.PO-02 / ISO A.5.10' },
+    { id: 'us_9', domain: 'Resguardo de Datos (ISO A.5.9)', question: '9. ¿Sabe cómo clasificar información sensible para no compartir datos confidenciales por medios no oficiales (WhatsApp personal)?', weight: 10, nistRef: 'ID.AM-03 / ISO A.5.9' },
+    { id: 'us_10', domain: 'Percepción de Riesgo (ISO A.7.2.2)', question: '10. ¿Cree que las medidas de seguridad de la empresa facilitan su trabajo en lugar de ser un obstáculo burocrático?', weight: 10, nistRef: 'PR.AT-01 / ISO A.7.2.2' }
   ]
 };
 
 export default function App() {
-  const [profile, setProfile] = useState({ name: '', sector: 'Servicios & Consultoría', size: '11-50 emp.' });
+  const [profile, setProfile] = useState({ name: '', sector: SECTORES_ECONOMICOS[0], size: '11-50 emp.' });
   const [selectedRole, setSelectedRole] = useState('ti');
   const [answers, setAnswers] = useState({});
-  const [currentStep, setCurrentStep] = useState('profile'); // 'profile', 'quiz', 'results'
+  const [currentStep, setCurrentStep] = useState('profile');
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -244,7 +92,6 @@ export default function App() {
     setAnswers(prev => ({ ...prev, [qId]: value }));
   };
 
-  // Cálculo del Puntaje Deductivo Ponderado
   const scoreData = useMemo(() => {
     let totalDeduction = 0;
     activeQuestions.forEach(q => {
@@ -275,33 +122,31 @@ export default function App() {
       border = 'border-blue-500';
     }
 
-    return { score: finalScore, level, color, border, totalDeduction };
+    return { score: finalScore, level, color, border };
   }, [answers, activeQuestions]);
 
-  // Generación de informe con la API de Gemini
   const generateAiReport = async () => {
     setLoadingAi(true);
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-
     const failures = activeQuestions.filter(q => answers[q.id] === 'no' || answers[q.id] === 'parcial');
     
-    const promptText = `Actúa como un Auditor Senior de Ciberseguridad especializado en PYMES en Colombia.
-Analiza la siguiente evaluación realizada con estándares NIST CSF 2.0 e ISO/IEC 27001:
+    const promptText = `Actúa como Auditor Senior de Ciberseguridad para PYMES en Colombia.
+Analiza la evaluación NIST CSF 2.0 e ISO 27001 realizada a:
 - Empresa: ${profile.name || 'PYME'} (${profile.sector}, ${profile.size})
-- Rol Evaluado: ${selectedRole.toUpperCase()}
+- Perfil Evaluado: ${selectedRole.toUpperCase()}
 - Puntaje Obtenido: ${scoreData.score}% (Nivel de Riesgo: ${scoreData.level})
 
-Controles con deficiencias detectadas:
-${failures.map(f => `- ${f.question} (Respuesta: ${answers[f.id]}, Norma: ${f.nistRef})`).join('\n')}
+Deficiencias reportadas:
+${failures.map(f => `- ${f.question} (Respuesta: ${answers[f.id]})`).join('\n')}
 
-Por favor proporciona un informe conciso y estructurado con:
-1. Resumen Ejecutivo del estado de madurez de la empresa.
-2. Top 3 Vulnerabilidades Críticas identificadas y el impacto directo para el negocio.
-3. Plan de Acción Priorizado a Corto Plazo (0-30 días) utilizando herramientas open-source o soluciones de bajo costo para PYMES.`;
+Escribe un informe conciso con:
+1. Resumen Ejecutivo de Madurez.
+2. Principales Vulnerabilidades Críticas y su impacto comercial/operativo.
+3. Plan de Acción Priorizado a 30 días con herramientas abiertas o de bajo costo para PYMES.`;
 
     try {
       if (!apiKey) {
-        setAiAnalysis("Para habilitar el análisis en tiempo real con Inteligencia Artificial, registra tu variable VITE_GEMINI_API_KEY en Vercel.");
+        setAiAnalysis("Para habilitar el análisis en tiempo real con Inteligencia Artificial, registra la variable VITE_GEMINI_API_KEY en Vercel.");
         setLoadingAi(false);
         return;
       }
@@ -309,19 +154,17 @@ Por favor proporciona un informe conciso y estructurado con:
       const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }]
-        })
+        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
       });
 
       const data = await res.json();
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
         setAiAnalysis(data.candidates[0].content.parts[0].text);
       } else {
-        setAiAnalysis("No se pudo generar el análisis automático. Verifica la validez de tu API Key.");
+        setAiAnalysis("No se obtuvo respuesta de Gemini API. Verifica que la API Key sea válida.");
       }
     } catch (err) {
-      setAiAnalysis("Error al conectar con la API de Gemini. Revisa la consola o la configuración de red.");
+      setAiAnalysis("Error al conectar con el servidor de IA.");
     } finally {
       setLoadingAi(false);
     }
@@ -338,29 +181,25 @@ Por favor proporciona un informe conciso y estructurado con:
 
     try {
       if (!apiKey) {
-        setChatMessages(prev => [...prev, { sender: 'ai', text: 'Configura la variable VITE_GEMINI_API_KEY en Vercel para conversar con el asesor.' }]);
+        setChatMessages(prev => [...prev, { sender: 'ai', text: 'Configura VITE_GEMINI_API_KEY en Vercel para conversar con el asesor.' }]);
         setChatLoading(false);
         return;
       }
 
-      const prompt = `Eres un Asesor Consultor en Ciberseguridad para PYMES. El usuario pregunta: "${userMsg}". Responde de forma clara, técnica y orientada a soluciones prácticas de bajo costo.`;
-
       const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+        body: JSON.stringify({ contents: [{ parts: [{ text: `Eres un Asesor de Ciberseguridad para PYMES. Responde: "${userMsg}"` }] }] })
       });
 
       const data = await res.json();
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
         setChatMessages(prev => [...prev, { sender: 'ai', text: data.candidates[0].content.parts[0].text }]);
       } else {
-        setChatMessages(prev => [...prev, { sender: 'ai', text: 'Lo siento, tuve un problema procesando la consulta. Intenta nuevamente.' }]);
+        setChatMessages(prev => [...prev, { sender: 'ai', text: 'No se pudo procesar la consulta.' }]);
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { sender: 'ai', text: 'Error de conexión con el servicio de Inteligencia Artificial.' }]);
+      setChatMessages(prev => [...prev, { sender: 'ai', text: 'Error al conectar con la IA.' }]);
     } finally {
       setChatLoading(false);
     }
@@ -368,14 +207,13 @@ Por favor proporciona un informe conciso y estructurado con:
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
-      {/* Header Bar */}
-      <header className="max-w-6xl mx-auto flex items-center justify-between pb-6 border-b border-slate-800 mb-8">
+      <header className="max-w-6xl mx-auto flex items-center justify-between pb-6 border-b border-slate-800 mb-8 print:hidden">
         <div className="flex items-center space-x-3">
           <div className="p-2.5 bg-cyan-600/20 rounded-xl border border-cyan-500/30 text-cyan-400">
             <Shield className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">
               CyberPyme NIST & ISO 27001
             </h1>
             <p className="text-xs text-slate-400">Semillero de Ciberseguridad PYME</p>
@@ -384,7 +222,7 @@ Por favor proporciona un informe conciso y estructurado con:
         {currentStep !== 'profile' && (
           <button
             onClick={() => { setCurrentStep('profile'); setAnswers({}); }}
-            className="flex items-center space-x-2 text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 transition"
+            className="flex items-center space-x-2 text-xs bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 transition"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Reiniciar</span>
@@ -392,16 +230,14 @@ Por favor proporciona un informe conciso y estructurado con:
         )}
       </header>
 
-      {/* Main Container */}
       <main className="max-w-6xl mx-auto">
-        {/* Step 1: Perfil de la Organización */}
         {currentStep === 'profile' && (
-          <div className="max-w-2xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8 backdrop-blur">
+          <div className="max-w-2xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8">
             <h2 className="text-xl font-semibold text-cyan-400 mb-2 flex items-center gap-2">
               <Building2 className="w-5 h-5" /> 1. Perfil de la Organización
             </h2>
             <p className="text-sm text-slate-400 mb-6">
-              Mida la resiliencia digital de su empresa evaluando los controles críticos de las normas NIST CSF 2.0 e ISO/IEC 27001 adaptados al contexto PYME.
+              Mida la resiliencia digital de su empresa adaptada al contexto operativo real de la PYME.
             </p>
 
             <div className="space-y-4">
@@ -409,7 +245,7 @@ Por favor proporciona un informe conciso y estructurado con:
                 <label className="block text-xs font-medium text-slate-300 mb-1">Nombre de la PYME / Organización</label>
                 <input
                   type="text"
-                  placeholder="Ej. Soluciones Logísticas S.A.S"
+                  placeholder="Ej. Autoshop S.A.S"
                   value={profile.name}
                   onChange={e => setProfile({ ...profile, name: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
@@ -424,11 +260,9 @@ Por favor proporciona un informe conciso y estructurado con:
                     onChange={e => setProfile({ ...profile, sector: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
                   >
-                    <option>Servicios & Consultoría</option>
-                    <option>Comercio & Retail</option>
-                    <option>Tecnología & Software</option>
-                    <option>Salud & Servicios Médicos</option>
-                    <option>Manufactura e Industria</option>
+                    {SECTORES_ECONOMICOS.map((sec, i) => (
+                      <option key={i} value={sec}>{sec}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -447,12 +281,13 @@ Por favor proporciona un informe conciso y estructurado con:
               </div>
 
               <div className="pt-4">
-                <label className="block text-xs font-medium text-slate-300 mb-2">2. Seleccione el Rol de Evaluación</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="block text-xs font-medium text-slate-300 mb-2">2. Seleccione el Rol / Enfoque de Evaluación</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {[
-                    { id: 'ti', title: 'Técnico TI / SysAdmin', desc: 'MFA, backups, parches, VLANs, EDR y logs.' },
-                    { id: 'gerente', title: 'Gerente / Director', desc: 'Presupuesto, BCP, riesgos y proveedores.' },
-                    { id: 'admin', title: 'Administrador / Toma Decisión', desc: 'Permisos, contraseñas, USBs y capacitación.' }
+                    { id: 'ti', title: 'Técnico TI / SysAdmin', desc: '10 controles técnicos (MFA, backups, VLANs, EDR, logs).' },
+                    { id: 'gerente', title: 'Gerente / Director', desc: '10 controles estratégicos (Presupuesto, BCP, riesgos, NDAs).' },
+                    { id: 'admin', title: 'Administrador / Decisión', desc: '10 controles operativos (Permisos, USBs, retiro de personal).' },
+                    { id: 'usuario', title: 'Colaborador / Usuario Final', desc: '10 controles de percepción, hábitos y cultura de seguridad.' }
                   ].map(r => (
                     <button
                       key={r.id}
@@ -481,7 +316,6 @@ Por favor proporciona un informe conciso y estructurado con:
           </div>
         )}
 
-        {/* Step 2: Cuestionario Dinámico */}
         {currentStep === 'quiz' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-4">
@@ -500,8 +334,8 @@ Por favor proporciona un informe conciso y estructurado con:
                 </div>
 
                 <div className="border-t border-slate-800 pt-4">
-                  <div className="text-xs text-slate-400 mb-1">Postura Calculada Actual:</div>
-                  <div className={`text-2xl font-bold font-mono ${scoreData.color}`}>
+                  <div className="text-xs text-slate-400 mb-1">Postura Actual Calculada:</div>
+                  <div className={`text-3xl font-bold font-mono ${scoreData.color}`}>
                     {scoreData.score}% ({scoreData.level})
                   </div>
                 </div>
@@ -523,7 +357,7 @@ Por favor proporciona un informe conciso y estructurado con:
 
             <div className="lg:col-span-2 space-y-4">
               {activeQuestions.map((q, idx) => (
-                <div key={q.id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition">
+                <div key={q.id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded">
                       {q.nistRef}
@@ -531,16 +365,15 @@ Por favor proporciona un informe conciso y estructurado con:
                     <span className="text-xs text-slate-500 font-mono">Peso: -{q.weight} pts</span>
                   </div>
 
-                  <h4 className="text-sm font-medium text-slate-200 mb-2">
-                    {idx + 1}. {q.question}
+                  <h4 className="text-sm font-medium text-slate-200 mb-4">
+                    {q.question}
                   </h4>
-                  <p className="text-xs text-slate-400 mb-4">{q.explanation}</p>
 
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: 'Cumple (100%)', value: 'si', btnClass: 'border-emerald-600/50 hover:bg-emerald-950/40 text-emerald-400' },
-                      { label: 'Parcial (-50%)', value: 'parcial', btnClass: 'border-amber-600/50 hover:bg-amber-950/40 text-amber-400' },
-                      { label: 'No Cumple (0%)', value: 'no', btnClass: 'border-red-600/50 hover:bg-red-950/40 text-red-400' }
+                      { label: 'Cumple (100%)', value: 'si', btnClass: 'border-emerald-600/50 text-emerald-400' },
+                      { label: 'Parcial (-50%)', value: 'parcial', btnClass: 'border-amber-600/50 text-amber-400' },
+                      { label: 'No Cumple (0%)', value: 'no', btnClass: 'border-red-600/50 text-red-400' }
                     ].map(opt => (
                       <button
                         key={opt.value}
@@ -561,56 +394,70 @@ Por favor proporciona un informe conciso y estructurado con:
           </div>
         )}
 
-        {/* Step 3: Resultados e IA */}
         {currentStep === 'results' && (
           <div className="space-y-8">
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-slate-800">
+            {/* Informe imprimible */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8 print:bg-white print:text-black print:border-none">
+              <div className="flex justify-between items-center mb-6 pb-6 border-b border-slate-800 print:border-black">
                 <div>
-                  <div className="text-xs text-cyan-400 font-mono uppercase tracking-wider mb-1">
-                    Informe NIST CSF 2.0 & ISO 27001 | PYME: {profile.name || 'Evaluada'}
+                  <div className="text-xs text-cyan-400 font-mono uppercase print:text-slate-700">
+                    INFORME DE CIBERSEGURIDAD | SECTOR: {profile.sector}
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-100">Postura General de Ciberseguridad</h2>
+                  <h2 className="text-2xl font-bold text-slate-100 print:text-black">
+                    {profile.name || 'Empresa Evaluada'}
+                  </h2>
+                  <p className="text-xs text-slate-400 print:text-slate-600">
+                    Evaluación realizada para el perfil: <span className="font-semibold">{selectedRole.toUpperCase()}</span> ({profile.size})
+                  </p>
                 </div>
-                <div className={`text-right p-4 rounded-xl bg-slate-950 border ${scoreData.border}`}>
-                  <div className="text-xs text-slate-400">PUNTAJE FINAL</div>
-                  <div className={`text-3xl font-extrabold font-mono ${scoreData.color}`}>
-                    {scoreData.score}%
+                <div className="flex items-center gap-4">
+                  <div className={`text-right p-4 rounded-xl bg-slate-950 border ${scoreData.border} print:bg-slate-100 print:border-black`}>
+                    <div className="text-xs text-slate-400 print:text-slate-700">MADUREZ FINAL</div>
+                    <div className={`text-3xl font-extrabold font-mono ${scoreData.color} print:text-black`}>
+                      {scoreData.score}%
+                    </div>
+                    <div className="text-xs font-medium text-slate-300 print:text-black">
+                      Riesgo: {scoreData.level}
+                    </div>
                   </div>
-                  <div className="text-xs font-medium text-slate-300">Nivel de Riesgo: {scoreData.level}</div>
+                  <button
+                    onClick={() => window.print()}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 p-3 rounded-xl border border-slate-700 transition print:hidden"
+                    title="Imprimir Informe / Exportar PDF"
+                  >
+                    <Printer className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Diagnóstico con Inteligencia Artificial */}
-              <div className="mt-6 bg-slate-950 border border-slate-800 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-cyan-400" />
-                  Análisis Diagnóstico Inteligente (Gemini IA)
+              <div className="mt-6 bg-slate-950 border border-slate-800 rounded-xl p-5 print:bg-white print:border-black">
+                <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2 mb-3 print:text-black">
+                  <Sparkles className="w-4 h-4 print:hidden" />
+                  Diagnóstico y Plan de Acción Recomendado (Gemini IA)
                 </h3>
                 {loadingAi ? (
-                  <div className="flex items-center space-x-3 text-slate-400 text-sm py-4">
+                  <div className="flex items-center space-x-3 text-slate-400 text-sm py-4 print:hidden">
                     <RefreshCw className="w-5 h-5 animate-spin text-cyan-400" />
-                    <span>Auditando brechas y generando recomendaciones personalizadas...</span>
+                    <span>Analizando deficiencias y estructurando plan de acción...</span>
                   </div>
                 ) : (
-                  <div className="text-xs md:text-sm text-slate-300 whitespace-pre-line leading-relaxed font-sans">
+                  <div className="text-xs md:text-sm text-slate-300 whitespace-pre-line leading-relaxed print:text-black">
                     {aiAnalysis}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Chatbot Asesor Integrado */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-cyan-400" />
+            {/* Chatbot Integrado */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 print:hidden">
+              <h3 className="text-sm font-semibold text-slate-200 mb-4">
                 Consultar al Asesor de IA del Semillero
               </h3>
 
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 h-64 overflow-y-auto space-y-3 mb-4">
                 {chatMessages.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-8">
-                    Haga preguntas sobre cómo implementar estas soluciones en su PYME.
+                    Realice preguntas sobre cómo implementar los controles o fortalecer la cultura de ciberseguridad.
                   </p>
                 ) : (
                   chatMessages.map((msg, i) => (
@@ -628,7 +475,7 @@ Por favor proporciona un informe conciso y estructurado con:
                 {chatLoading && (
                   <div className="text-xs text-slate-500 flex items-center space-x-2">
                     <RefreshCw className="w-3 h-3 animate-spin text-cyan-400" />
-                    <span>El asesor está respondiendo...</span>
+                    <span>El asesor está escribiendo...</span>
                   </div>
                 )}
               </div>
@@ -636,7 +483,7 @@ Por favor proporciona un informe conciso y estructurado con:
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Escriba su inquietud técnica o de gestión..."
+                  placeholder="Escriba su consulta técnica o de concientización..."
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
