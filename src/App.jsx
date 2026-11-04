@@ -180,7 +180,6 @@ PLAN ESTRATÉGICO DE MITIGACIÓN A 30 DÍAS (Herramientas Open-Source/Bajo Costo
         throw new Error("No API Key");
       }
     } catch (err) {
-      // Fallback extenso, formal y libre de numerales ###
       setAiAnalysis(`DIAGNÓSTICO EJECUTIVO DE POSTURA
 La entidad ${profile.name || 'evaluada'}, perteneciente al sector ${profile.sector}, presenta un índice global de postura de ciberseguridad del ${scoreData.score}% (${scoreData.level}). Tras la revisión del enfoque ${selectedRole.toUpperCase()}, se constata la presencia de vulnerabilidades estructurales en la prevención, detección y continuidad operativa.
 
@@ -219,7 +218,6 @@ PLAN ESTRATÉGICO DE MITIGACIÓN A 30 DÍAS (HERRAMIENTAS LIBRES & BAJO COSTO)
         throw new Error("No API Key");
       }
     } catch (err) {
-      // Fallback Inteligente y Contextual para el Chatbot
       const lower = userMsg.toLowerCase();
       let responseText = "Para mitigar los riesgos reportados en la PYME, se recomienda estructurar un plan de acción priorizando los controles con mayor impacto operacional.";
 
@@ -440,4 +438,19 @@ PLAN ESTRATÉGICO DE MITIGACIÓN A 30 DÍAS (HERRAMIENTAS LIBRES & BAJO COSTO)
                     {profile.name || 'Empresa Evaluada'}
                   </h2>
                   <p className="text-xs text-slate-400 print:text-slate-600">
-                    Evaluación
+                    Evaluación realizada para el perfil: <span className="font-semibold">{selectedRole.toUpperCase()}</span> ({profile.size})
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className={`text-right p-4 rounded-xl bg-slate-950 border ${scoreData.border} print:bg-slate-100 print:border-black`}>
+                    <div className="text-xs text-slate-400 print:text-slate-700">MADUREZ FINAL</div>
+                    <div className={`text-3xl font-extrabold font-mono ${scoreData.color} print:text-black`}>
+                      {scoreData.score}%
+                    </div>
+                    <div className="text-xs font-medium text-slate-300 print:text-black">
+                      Riesgo: {scoreData.level}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => window.print()}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-
